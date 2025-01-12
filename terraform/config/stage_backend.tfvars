@@ -1,0 +1,5 @@
+subscription_id      = "b9c4d03f-47e6-4875-92bf-4a77de1c09ee"
+storage_account_name = "alkatraz"
+resource_group_name  = "Trials"
+container_name       = "terraform-statefiles"
+key                  = "deplay.tfstate"
