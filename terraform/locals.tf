@@ -3,7 +3,8 @@ locals {
 
   tags = {
     repository     = locals.prefix
-    terraform managed   = true
+    repository_url = "https://github.com/piusolatunjijoseph/${var.product_name}"
+    terraform-managed   = true
   }
 
 }

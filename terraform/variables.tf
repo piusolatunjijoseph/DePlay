@@ -3,5 +3,5 @@ variable "location" {
 }
 
 variable "product_name" {
-  default = "deplay"
+  default = "DePlay"
 }
