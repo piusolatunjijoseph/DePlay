@@ -1,10 +1,8 @@
 provider "azurerm" {
+    backend "azurerm" {}
+
   features {}
 }
-
-│ terraform {
-│   backend "local" {}
-│ }
 
 terraform {
   required_providers {
