@@ -13,7 +13,7 @@ resource "azurerm_storage_account" "deplay_storage" {
 }
 
 resource "azurerm_storage_container" "deplay_container" {
-  name                  = "example-container"
+  name                  = "fortknoxx"
   storage_account_id  = azurerm_storage_account.deplay_storage.id
   container_access_type = "private" # Options: "private", "blob", or "container"
 }
