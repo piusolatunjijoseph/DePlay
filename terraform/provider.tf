@@ -1,6 +1,4 @@
 provider "azurerm" {
-    backend "azurerm" {}
-
   features {}
 }
 
