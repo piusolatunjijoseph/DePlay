@@ -1,0 +1,27 @@
+name: 'Terraform Build Validation'
+run-name: Terraform Build Validation By ${{github.actor}}
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-pr.yml'
+      - '.github/workflows/terraform-push.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform:
+    name: Terraform Run Validation
+    uses: piusolatunjijoseph/terraform-deploy/.github/workflows/terraform.yml@main
+    with:
+      environment: 'stage'
+      apply: false
+    secrets:
+      SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID}}
+      SMG_TERRAFORM_GH_TOKEN: ${{ secrets.SMG_TERRAFORM_GITHUB_TOKEN}}
+      SMG_TERRAFORM_CLIENT_ID: ${{ secrets.SMG_TERRAFORM_CLIENT_ID}}
+      SMG_TERRAFORM_CLIENT_SECRET: ${{ secrets.SMG_TERRAFORM_CLIENT_SECRET}}
+      SMG_TERRAFORM_TENANT_ID: ${{ secrets.SMG_TERRAFORM_TENANT_ID}}

@@ -1,0 +1,50 @@
+name: 'Terraform Plan and Apply'
+run-name: Terraform Plan and Apply By ${{github.actor}}
+
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform.yml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Please select an environment"
+        required: true
+        type: environment
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  set-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set_variables.outputs.environment }}
+    steps:
+    - id: set_variables
+      shell: pwsh
+      run: |
+        if ( '${{github.event_name}}' -eq 'push') {
+          $environment = 'stage'
+        }
+        else {
+          $environment = '${{ inputs.environment }}'
+        }
+        echo "environment=$environment" >> $Env:GITHUB_OUTPUT
+  terraform:
+    name: Terraform Run on ${{needs.set-environment.outputs.environment}}
+    needs : set-environment
+    uses: piusolatunjijoseph/terraform-deploy/.github/workflows/terraform.yml@main
+    with:
+      environment: ${{needs.set-environment.outputs.environment}}
+      apply: true
+    secrets:
+      SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID}}
+      TERRAFORM_GH_TOKEN: ${{ secrets.TERRAFORM_GH_TOKEN}}
+      TERRAFORM_CLIENT_ID: ${{ secrets.TERRAFORM_CLIENT_ID}}
+      TERRAFORM_CLIENT_SECRET: ${{ secrets.TERRAFORM_CLIENT_SECRET}}
+      TERRAFORM_TENANT_ID: ${{ secrets.TERRAFORM_TENANT_ID}}
