@@ -1,0 +1,116 @@
+name: Build and Push Docker images for affected WebApps
+run-name: PR By ${{ github.actor }} - ${{ inputs.environment || github.event.pull_request.title }}
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Please select an environment'
+        required: true
+        type: choice
+        default: stage
+        options:
+          - stage
+          - prod
+
+jobs:
+  define-environment:
+    name: Define Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ env.environment }}
+    steps:
+      - name: Set Environment
+        run: |
+          echo $GITHUB_ENV
+          if [ ${{ github.event_name }} == release ]; then
+              echo "environment=prod" >> $GITHUB_ENV
+              echo "Release to prod"
+          elif [ ${{ github.event_name }} == push ]; then
+              echo "environment=stage" >> $GITHUB_ENV
+              echo "Merge to main, deploy to stage"
+          elif [ ${{ github.event_name }} == workflow_dispatch ]; then
+              echo "environment=${{ inputs.environment }}" >> $GITHUB_ENV
+              echo "Manual deploy to ${{ inputs.environment }}"
+          else
+              echo "environment=stage" >> $GITHUB_ENV
+              echo "Unknown workflow trigger, ${{ github.event_name }}, deploy to stage" 
+          fi
+
+  detect-changes:
+    runs-on: ubuntu-latest
+    needs: [define-environment]
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_changes: ${{ steps.set-matrix.outputs.has_changes }}
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      # Step 2: List directories matching 'web-*' in /apps folder
+      - name: Detect directories in /apps
+        id: set-matrix
+        run: |
+          # Temporarily disable exit on error
+          set +e
+
+          if [ ! -d "apps" ]; then
+            echo "The /apps folder does not exist."
+            ALL_APP_DIRS="[]"
+          else
+            # Find all new directories matching the pattern `web-*` in /apps
+            ALL_APP_DIRS=$(find apps -mindepth 1 -maxdepth 1 -type d -name 'web-*' | sed 's|^apps/||')
+
+            # Convert to JSON array format
+            if [ -z "$ALL_APP_DIRS" ]; then
+              echo "No matching directories found in /apps."
+              ALL_APP_DIRS="[]"
+            else
+              # Ensure proper JSON formatting using jq
+              ALL_APP_DIRS=$(echo "$ALL_APP_DIRS" | jq -R . | jq -s . | tr -d '[:space:]')
+            fi
+          fi
+          
+          echo "Detected directories: $ALL_APP_DIRS"
+          echo "matrix=$ALL_APP_DIRS" >> "$GITHUB_OUTPUT"
+
+      # Step 3: Detect new directories matching 'web-*' in /apps folder
+      - name: Detect new directories matching 'web-*' in /apps
+        run: |
+
+          # Print the result
+          git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
+          git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
+
+          # Get the previous commit hash
+          PREV_COMMIT=$(git rev-parse HEAD~1)
+
+          # Find newly added directories matching 'web-*' in /apps folder
+          NEW_APP_DIRS=$(git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' | awk -F'/' '{print $2}' | sort -u)
+
+          # Convert the result into a JSON array
+          if [ -z "$NEW_APP_DIRS" ]; then
+            echo "No new directories detected in /apps."
+            NEW_APP_DIRS="[]"
+          else
+            # Format as JSON array
+            NEW_APP_DIRS=$(echo "$NEW_APP_DIRS" | jq -R . | jq -s . | tr -d '[:space:]')
+          fi
+
+          echo "matrix=$NEW_APP_DIRS" >> "$GITHUB_OUTPUT"
+
+          if [ "$NEW_APP_DIRS" != "[]" ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
