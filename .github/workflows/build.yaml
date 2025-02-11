@@ -87,9 +87,9 @@ jobs:
             # Get the previous commit hash first
             PREV_COMMIT=$(git rev-parse HEAD~1)
 
-            # Now print the diff result for debugging
-            git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
-            git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
+            # # Now print the diff result for debugging
+            # git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
+            # git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
 
             # Find newly added directories matching 'web-*' in /apps folder
             NEW_APP_DIRS=$(git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' | awk -F'/' '{print $2}' | sort -u)
@@ -104,6 +104,7 @@ jobs:
             fi
 
             echo "matrix=$NEW_APP_DIRS" >> "$GITHUB_OUTPUT"
+            echo "DEBUG: New app directories JSON: $NEW_APP_DIRS"
 
             if [ "$NEW_APP_DIRS" != "[]" ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
