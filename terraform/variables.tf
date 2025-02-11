@@ -14,8 +14,3 @@ variable "subscription_id" {
 variable "location" {
     type = string
 }
-
-
-
-
-gh attestation verify checksums.txt -R terraform-linters/tflint sha256sum --ignore-missing -c checksums.txt
