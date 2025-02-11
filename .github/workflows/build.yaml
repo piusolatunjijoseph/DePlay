@@ -54,9 +54,6 @@ jobs:
         with:
           fetch-depth: 2
 
-      - name: Make scripts executable
-        run: chmod +x scripts/*.sh
-
       # Step 2: List directories matching 'web-*' in /apps folder
       - name: Detect directories in /apps
         id: set-matrix
