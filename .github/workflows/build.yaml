@@ -84,30 +84,29 @@ jobs:
       # Step 3: Detect new directories matching 'web-*' in /apps folder
       - name: Detect new directories matching 'web-*' in /apps
         run: |
+            # Get the previous commit hash first
+            PREV_COMMIT=$(git rev-parse HEAD~1)
 
-          # Print the result
-          git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
-          git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
+            # Now print the diff result for debugging
+            git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
+            git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
 
-          # Get the previous commit hash
-          PREV_COMMIT=$(git rev-parse HEAD~1)
+            # Find newly added directories matching 'web-*' in /apps folder
+            NEW_APP_DIRS=$(git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' | awk -F'/' '{print $2}' | sort -u)
 
-          # Find newly added directories matching 'web-*' in /apps folder
-          NEW_APP_DIRS=$(git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' | awk -F'/' '{print $2}' | sort -u)
-
-          # Convert the result into a JSON array
-          if [ -z "$NEW_APP_DIRS" ]; then
+            # Convert the result into a JSON array
+            if [ -z "$NEW_APP_DIRS" ]; then
             echo "No new directories detected in /apps."
             NEW_APP_DIRS="[]"
-          else
+            else
             # Format as JSON array
             NEW_APP_DIRS=$(echo "$NEW_APP_DIRS" | jq -R . | jq -s . | tr -d '[:space:]')
-          fi
+            fi
 
-          echo "matrix=$NEW_APP_DIRS" >> "$GITHUB_OUTPUT"
+            echo "matrix=$NEW_APP_DIRS" >> "$GITHUB_OUTPUT"
 
-          if [ "$NEW_APP_DIRS" != "[]" ]; then
+            if [ "$NEW_APP_DIRS" != "[]" ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-          else
+            else
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
-          fi
+            fi
