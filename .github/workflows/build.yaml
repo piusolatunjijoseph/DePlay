@@ -81,33 +81,29 @@ jobs:
           echo "Detected directories: $ALL_APP_DIRS"
           echo "matrix=$ALL_APP_DIRS" >> "$GITHUB_OUTPUT"
 
-      # Step 3: Detect new directories matching 'web-*' in /apps folder
-      - name: Detect new directories matching 'web-*' in /apps
+
+    # Step 3: Detect new directories matching 'web-*' in /apps folder
+
+      - name: Determine New Apps Added
+        id: check-new-dirs
         run: |
-            # Get the previous commit hash first
-            PREV_COMMIT=$(git rev-parse HEAD~1)
-
-            # # Now print the diff result for debugging
-            # git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/
-            # git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' || echo "No matching directories found"
-
-            # Find newly added directories matching 'web-*' in /apps folder
-            NEW_APP_DIRS=$(git diff --diff-filter=A --name-only $PREV_COMMIT HEAD -- apps/ | grep 'apps/web-' | awk -F'/' '{print $2}' | sort -u)
-
-            # Convert the result into a JSON array
-            if [ -z "$NEW_APP_DIRS" ]; then
-            echo "No new directories detected in /apps."
-            NEW_APP_DIRS="[]"
+            # Determine base and head commits for diff
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
             else
-            # Format as JSON array
-            NEW_APP_DIRS=$(echo "$NEW_APP_DIRS" | jq -R . | jq -s . | tr -d '[:space:]')
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
             fi
 
-            echo "matrix=$NEW_APP_DIRS" >> "$GITHUB_OUTPUT"
-            echo "DEBUG: New app directories JSON: $NEW_APP_DIRS"
+            echo "Comparing changes between $BASE_SHA...$HEAD_SHA"
 
-            if [ "$NEW_APP_DIRS" != "[]" ]; then
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            # Get the list of new directories in apps/ (directories that exist in HEAD but not in BASE)
+            NEW_DIRS=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | awk '$1 == "A" {print $2}' | grep -E '^apps/[^/]+/$' | cut -d'/' -f2 | paste -sd ' ' -)
+
+            if [ -n "$NEW_DIRS" ]; then
+            echo "New directories detected: $NEW_DIRS"
+            echo "NEW_DIR=$NEW_DIRS" >> $GITHUB_ENV
             else
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No new directories detected."
             fi
