@@ -87,7 +87,7 @@ jobs:
         id: check-new-dirs
         run: |
           # Determine base and head commits for diff
-            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
                 BASE_SHA="${{ github.event.pull_request.base.sha }}"
                 HEAD_SHA="${{ github.event.pull_request.head.sha }}"
             else
