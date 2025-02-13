@@ -89,7 +89,7 @@ jobs:
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_SHA=$(git rev-parse HEAD~1)
+            BASE_SHA="${{ github.event.before || github.event.ref }}~1"
             HEAD_SHA="${{ github.sha }}"
           else
             BASE_SHA="${{ github.event.before }}"
@@ -98,21 +98,30 @@ jobs:
 
           echo "Comparing changes between $BASE_SHA...$HEAD_SHA"
 
-          # Get the list of new directories in apps/ (directories that exist in HEAD but not in BASE)
-          NEW_DIRS=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | awk '$1 == "A" {print $2}' | grep -E '^apps/[^/]+/$' | cut -d'/' -f2 | paste -sd ' ' -)
+          # Debug: Show all changes
+          echo "All changes:"
+          git diff --name-status "$BASE_SHA" "$HEAD_SHA"
+
+          # Modified directory detection
+          NEW_DIRS=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | 
+            grep -E '^A.*apps/' | 
+            sed -E 's|^A[[:space:]]+apps/([^/]+).*|\1|' | 
+            sort -u | 
+            tr '\n' ' ')
+
+          echo "Debug - Raw git diff output:"
+          git diff --name-status "$BASE_SHA" "$HEAD_SHA" | grep -E '^A.*apps/'
+
+          echo "Debug - After processing:"
+          echo "$NEW_DIRS"
 
           if [ -n "$NEW_DIRS" ]; then
             echo "New directories detected: $NEW_DIRS"
             echo "NEW_DIR=$NEW_DIRS" >> $GITHUB_ENV
-            echo "new_dirs=$NEW_DIRS" >> "$GITHUB_OUTPUT"  # Set as an output variable
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"  # Boolean output for later jobs
+            echo "new_dirs=$NEW_DIRS" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "No new directories detected."
-            echo "new_dirs=" >> "$GITHUB_OUTPUT"  # Empty output
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"  # No changes detected
+            echo "new_dirs=" >> "$GITHUB_OUTPUT"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Print Results
-        run: |
-          echo "New directories found: ${{ steps.check-new-dirs.outputs.new_dirs }}"
-          echo "Has changes: ${{ steps.check-new-dirs.outputs.has_changes }}"
