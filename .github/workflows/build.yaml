@@ -83,17 +83,16 @@ jobs:
 
 
     # Step 3: Detect new directories matching 'web-*' in /apps folder
-
       - name: Determine New Apps Added
         id: check-new-dirs
         run: |
-            # Determine base and head commits for diff
+          # Determine base and head commits for diff
             if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            BASE_SHA="$(git rev-parse HEAD~1)"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+                BASE_SHA="${{ github.event.pull_request.base.sha }}"
+                HEAD_SHA="${{ github.event.pull_request.head.sha }}"
             else
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
+                BASE_SHA="${{ github.event.before }}"
+                HEAD_SHA="${{ github.sha }}"
             fi
 
             echo "Comparing changes between $BASE_SHA...$HEAD_SHA"
@@ -102,8 +101,12 @@ jobs:
             NEW_DIRS=$(git diff --name-status "$BASE_SHA" "$HEAD_SHA" | awk '$1 == "A" {print $2}' | grep -E '^apps/[^/]+/$' | cut -d'/' -f2 | paste -sd ' ' -)
 
             if [ -n "$NEW_DIRS" ]; then
-            echo "New directories detected: $NEW_DIRS"
-            echo "NEW_DIR=$NEW_DIRS" >> $GITHUB_ENV
+                echo "New directories detected: $NEW_DIRS"
+                echo "NEW_DIR=$NEW_DIRS" >> $GITHUB_ENV
+                echo "new_dirs=$NEW_DIRS" >> "$GITHUB_OUTPUT"  # Set as an output variable
+                echo "has_changes=true" >> "$GITHUB_OUTPUT"  # Boolean output for later jobs
             else
-            echo "No new directories detected."
+                echo "No new directories detected."
+                echo "new_dirs=" >> "$GITHUB_OUTPUT"  # Empty output
+                echo "has_changes=false" >> "$GITHUB_OUTPUT"  # No changes detected
             fi
