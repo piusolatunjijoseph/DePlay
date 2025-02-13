@@ -88,6 +88,9 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BASE_SHA="${{ github.event.before || github.event.ref }}~1"
+            HEAD_SHA="${{ github.sha }}"
           else
             BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
@@ -108,3 +111,8 @@ jobs:
             echo "new_dirs=" >> "$GITHUB_OUTPUT"  # Empty output
             echo "has_changes=false" >> "$GITHUB_OUTPUT"  # No changes detected
           fi
+
+      - name: Print Results
+        run: |
+          echo "New directories found: ${{ steps.check-new-dirs.outputs.new_dirs }}"
+          echo "Has changes: ${{ steps.check-new-dirs.outputs.has_changes }}"
